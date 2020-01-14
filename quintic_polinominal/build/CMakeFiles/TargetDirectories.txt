@@ -1,3 +1,0 @@
-/home/tongliuzhu/Udacity/quintic_polinominal/build/CMakeFiles/edit_cache.dir
-/home/tongliuzhu/Udacity/quintic_polinominal/build/CMakeFiles/rebuild_cache.dir
-/home/tongliuzhu/Udacity/quintic_polinominal/build/CMakeFiles/path_planning.dir
