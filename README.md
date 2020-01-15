@@ -3,7 +3,7 @@ Quintic Polinomial Path Planning for CarND-Path-Planning-Project
 
 ## Project description
 <p align="center">
-     <img src="./img/samples.png" alt="pipeline" width="100%" height="100%">
+     <img src="./quintic_planning/img/samples.png" alt="pipeline" width="100%" height="100%">
      <br>driving_scenarios
 </p>
 
@@ -36,7 +36,7 @@ When the lateral d-distance is close to the target d-value, which is the center 
 The implemented path planner is able to navigate safely through highway traffic with speed close to target speed limit. The car is able to keep lane with speed limit if the current lane is empty or execute safety maneuvers in order to overpass slow cars. Below, you can see one example of car behavior:
 
 <p align="center">
-     <img src="./img/sample.png" alt="pipeline" width="50%" height="50%">
+     <img src="./quintic_planning/img/sample.png" alt="pipeline" width="50%" height="50%">
      <br>one_sample
 </p>
 
