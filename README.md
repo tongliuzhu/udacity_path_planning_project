@@ -40,12 +40,12 @@ The implemented path planner is able to navigate safely through highway traffic 
      <br>one_sample
 </p>
 
-### Basic Build Instructions
-
+### Basic Compile and Run the code Instructions
+```sh
 1. Clone this repo.
-2. Make a build directory: `mkdir build && cd build`
-3. Compile: `cmake .. && make`
-4. Run it: `./path_planning`.
+2. cd quintic_planning
+3. ./run.sh
+```
 
 ### Dependencies
 
@@ -68,12 +68,6 @@ The implemented path planner is able to navigate safely through highway traffic 
     git clone https://github.com/uWebSockets/uWebSockets 
     cd uWebSockets
     git checkout e94b6e1
-```
-
-### Compile and Run Source code
-```sh
-cd quintic_planning
-./run.sh
 ```
 
 <!-- CONTRIBUTING -->
