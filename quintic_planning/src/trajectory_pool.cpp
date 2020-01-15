@@ -1,8 +1,8 @@
+#include "trajectory_pool.h"
 #include <assert.h>
 #include <float.h>
 #include <algorithm>
 #include <iostream>
-#include "trajectory_pool.h"
 
 namespace autoparking_planning
 {

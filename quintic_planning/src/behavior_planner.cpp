@@ -1,8 +1,8 @@
+#include "behavior_planner.h"
 #include <assert.h>
 #include <iostream>
 #include <memory>
 #include "lane_keeping.h"
-#include "behavior_planner.h"
 
 namespace autoparking_planning
 {

@@ -1,7 +1,7 @@
+#include "lane_changing.h"
 #include <vector>
 #include "lane_keeping.h"
 #include "trajectory_pool.h"
-#include "lane_changing.h"
 
 namespace autoparking_planning
 {

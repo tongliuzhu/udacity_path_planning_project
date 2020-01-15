@@ -1,7 +1,7 @@
+#include "trajectory_planner.h"
 #include <assert.h>
 #include <assert.h>
 #include <limits>
-#include "trajectory_planner.h"
 
 // using namespace std;
 using Eigen::MatrixXd;

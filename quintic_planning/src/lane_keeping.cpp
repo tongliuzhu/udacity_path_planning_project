@@ -1,8 +1,8 @@
+#include "lane_keeping.h"
 #include <future>
 #include <iostream>
 #include "lane_changing.h"
 #include "trajectory_pool.h"
-#include "lane_keeping.h"
 #define NOT_USING_MULTITHREADS false
 
 namespace autoparking_planning
@@ -83,15 +83,16 @@ TrajectorySharedPtr LaneKeeping::pathPlanning(const Eigen::VectorXd& current_sta
     TOtherCarsTrajectory cars_on_the_lane_traj =
         perception_frame.getLeadingCarsTrajectoryInLane(current_state_v6, kCurrentLane, Helper::kPredictionTime);
     trajectory_pool.setOtherCars(cars_on_the_lane_traj);
-    std::future<TrajectoryPool> fu_lane_keeping, fu_lane_plus, fu_lane_minus;
+    std::future<std::unique_ptr<TrajectoryPool> > fu_lane_keeping, fu_lane_plus, fu_lane_minus;
     // Generates trajectory to stay in the lane.
     if (enable_acc)
     {
         const double kDurationD = 0.0;
-        std::vector<Eigen::MatrixXd> other_trajectory_lane_keeping = trajectory_pool.getOtherTrajectoryPool();
-        fu_lane_keeping =
-            std::async(std::launch::async, &LaneKeeping::calTrajectoryPool, this,
-                       std::move(other_trajectory_lane_keeping), std::cref(current_state_v6), std::cref(kCurrentD), 0.);
+        const double kChangeLaneTimeInLaneKeeping = 0.;
+        TOtherCarsTrajectory other_trajectory_lane_keeping = trajectory_pool.getOtherTrajectoryPool();
+        fu_lane_keeping = std::async(std::launch::async, &LaneKeeping::calTrajectoryPool, this,
+                                     std::move(other_trajectory_lane_keeping), std::cref(current_state_v6),
+                                     std::cref(kCurrentD), std::cref(kChangeLaneTimeInLaneKeeping));
     }
 
     if (enable_lane_change)
@@ -103,7 +104,7 @@ TrajectorySharedPtr LaneKeeping::pathPlanning(const Eigen::VectorXd& current_sta
             const double kTargetD = Helper::laneNumberToD(kTargetLane);
             trajectory_pool.addOtherCars(
                 perception_frame.getOtherCarsTrajectoryInLane(current_state_v6, kTargetLane, Helper::kPredictionTime));
-            std::vector<Eigen::MatrixXd> other_trajectory_lane_plus = trajectory_pool.getOtherTrajectoryPool();
+            TOtherCarsTrajectory other_trajectory_lane_plus = trajectory_pool.getOtherTrajectoryPool();
             fu_lane_plus = std::async(std::launch::async, &LaneKeeping::calTrajectoryPool, this,
                                       std::move(other_trajectory_lane_plus), std::cref(current_state_v6),
                                       std::move(kTargetD), std::cref(Helper::kChangeLaneTime));
@@ -115,7 +116,7 @@ TrajectorySharedPtr LaneKeeping::pathPlanning(const Eigen::VectorXd& current_sta
             const double kTargetD = Helper::laneNumberToD(kTargetLane);
             trajectory_pool.addOtherCars(
                 perception_frame.getOtherCarsTrajectoryInLane(current_state_v6, kTargetLane, Helper::kPredictionTime));
-            std::vector<Eigen::MatrixXd> other_trajectory_lane_minus = trajectory_pool.getOtherTrajectoryPool();
+            TOtherCarsTrajectory other_trajectory_lane_minus = trajectory_pool.getOtherTrajectoryPool();
             fu_lane_minus = std::async(std::launch::async, &LaneKeeping::calTrajectoryPool, this,
                                        std::move(other_trajectory_lane_minus), std::cref(current_state_v6),
                                        std::move(kTargetD), std::cref(Helper::kChangeLaneTime));
@@ -124,24 +125,25 @@ TrajectorySharedPtr LaneKeeping::pathPlanning(const Eigen::VectorXd& current_sta
     // add all the trajectories to trajectory_pool
     if (enable_acc)
     {
-        TrajectoryPool ego_lane_keeping_trajectory_pool = fu_lane_keeping.get();  // must get first and then use
+        std::unique_ptr<TrajectoryPool> ego_lane_keeping_trajectory_pool =
+            std::move(fu_lane_keeping.get());  // must get first and then use
         trajectory_pool.getEgoTrajectoryPool().insert(trajectory_pool.getEgoTrajectoryPool().end(),
-                                                      ego_lane_keeping_trajectory_pool.getEgoTrajectoryPool().begin(),
-                                                      ego_lane_keeping_trajectory_pool.getEgoTrajectoryPool().end());
+                                                      ego_lane_keeping_trajectory_pool->getEgoTrajectoryPool().begin(),
+                                                      ego_lane_keeping_trajectory_pool->getEgoTrajectoryPool().end());
     }
     if (enable_lane_change && kCurrentLane + 1 <= Helper::kMaximumLaneNum)
     {
-        TrajectoryPool ego_lane_plus_trajectory_pool = fu_lane_plus.get();
+        std::unique_ptr<TrajectoryPool> ego_lane_plus_trajectory_pool = std::move(fu_lane_plus.get());
         trajectory_pool.getEgoTrajectoryPool().insert(trajectory_pool.getEgoTrajectoryPool().end(),
-                                                      ego_lane_plus_trajectory_pool.getEgoTrajectoryPool().begin(),
-                                                      ego_lane_plus_trajectory_pool.getEgoTrajectoryPool().end());
+                                                      ego_lane_plus_trajectory_pool->getEgoTrajectoryPool().begin(),
+                                                      ego_lane_plus_trajectory_pool->getEgoTrajectoryPool().end());
     }
     if (enable_lane_change && kCurrentLane - 1 >= Helper::kMinimumLaneNum)
     {
-        TrajectoryPool ego_lane_minus_trajectory_pool = fu_lane_minus.get();
+        std::unique_ptr<TrajectoryPool> ego_lane_minus_trajectory_pool = std::move(fu_lane_minus.get());
         trajectory_pool.getEgoTrajectoryPool().insert(trajectory_pool.getEgoTrajectoryPool().end(),
-                                                      ego_lane_minus_trajectory_pool.getEgoTrajectoryPool().begin(),
-                                                      ego_lane_minus_trajectory_pool.getEgoTrajectoryPool().end());
+                                                      ego_lane_minus_trajectory_pool->getEgoTrajectoryPool().begin(),
+                                                      ego_lane_minus_trajectory_pool->getEgoTrajectoryPool().end());
     }
 #endif
     TrajectorySharedPtr p_optimal_traj = trajectory_pool.optimalTrajectory();
@@ -171,18 +173,18 @@ TrajectorySharedPtr LaneKeeping::pathPlanning(const Eigen::VectorXd& current_sta
     return p_optimal_traj;
 }
 
-TrajectoryPool LaneKeeping::calTrajectoryPool(const TOtherCarsTrajectory& other_trajectory,
-                                              const Eigen::VectorXd& current_state_v6, const double& end_d,
-                                              const double& time_duration_d)
+std::unique_ptr<TrajectoryPool> LaneKeeping::calTrajectoryPool(const TOtherCarsTrajectory& other_trajectory,
+                                                               const Eigen::VectorXd& current_state_v6,
+                                                               const double& end_d, const double& time_duration_d)
 {
-    TrajectoryPool temp_trajectory_pool;
+    std::unique_ptr<TrajectoryPool> temp_trajectory_pool = make_unique<TrajectoryPool>();
     TrajectoryPlanner trajectory_p;
-    temp_trajectory_pool.setOtherCars(other_trajectory);
+    temp_trajectory_pool->setOtherCars(other_trajectory);
     for (double target_v = 0; target_v <= Helper::kSpeedLimit; target_v += 1)
     {
         for (double T = 1; T <= Helper::kPredictionTime; T += 1)
         {
-            temp_trajectory_pool.addTrajectory(
+            temp_trajectory_pool->addTrajectory(
                 trajectory_p.velocityKeepingSTTrajectory(current_state_v6, end_d, target_v, T, time_duration_d));
         }
     }
